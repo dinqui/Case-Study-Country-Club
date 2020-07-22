@@ -36,8 +36,8 @@ Write a SQL query to produce a list of the names of the facilities that do. */
 
 SELECT name
 FROM `Facilities`
-WHERE membercost =0
-LIMIT 0 , 30
+WHERE membercost >0
+
 
 
 
@@ -58,7 +58,7 @@ SELECT facid, name, membercost, monthlymaintenance
 FROM `Facilities`
 WHERE membercost < ( 0.2 * monthlymaintenance )
 AND membercost <>0
-LIMIT 0 , 30
+
 
 
 
@@ -67,8 +67,7 @@ Try writing the query without using the OR operator. */
 
 SELECT *
 FROM `Facilities`
-WHERE facid =1
-OR facid =5
+WHERE facid IN (1, 5)
 
 
 
@@ -83,7 +82,6 @@ THEN 'expensive'
 ELSE 'cheap'
 END AS label
 FROM `Facilities`
-LIMIT 0 , 30
 
 
 
@@ -103,13 +101,13 @@ Include in your output the name of the court, and the name of the member
 formatted as a single column. Ensure no duplicate data, and order by
 the member name. */
 
-SELECT name, CONCAT( `firstname` , ' ', `surname` ) AS membername
+SELECT DISTINCT name, CONCAT( `firstname` , ' ', `surname` ) AS membername
 FROM `Bookings` AS B
 INNER JOIN `Facilities` AS F ON B.`facid` = F.`facid`
 INNER JOIN `Members` AS M ON B.`memid` = M.`memid`
 WHERE B.facid =0
 OR B.facid =1
-GROUP BY membername
+ORDER BY membername
 
 
 
@@ -121,13 +119,8 @@ facility, the name of the member formatted as a single column, and the cost.
 Order by descending cost, and do not use any subqueries. */
 
 SELECT CONCAT( `firstname` , ' ', `surname` ) AS membername, name,
-CASE WHEN B.`memid` =0
-THEN (
-B.`slots` * `guestcost`
-)
-ELSE (
-B.`slots` * `membercost`
-)
+CASE WHEN B.`memid` =0 THEN (B.`slots` * `guestcost`)
+ELSE (B.`slots` * `membercost`)
 END AS 'Cost'
 FROM `Bookings` AS B
 INNER JOIN `Members` AS M ON B.`memid` = M.`memid`
@@ -140,6 +133,19 @@ ORDER BY `Cost` DESC
 
 
 /* Q9: This time, produce the same result as in Q8, but using a subquery. */
+
+SELECT CONCAT( `firstname` , ' ', `surname` ) AS membername, name AS facility, cost
+FROM (SELECT `firstname`, `surname`, `name`,
+      CASE WHEN `firstname` = 'GUEST' THEN `guestcost` * `slots`
+      ELSE `membercost` * `slots` END AS cost, `starttime`
+      FROM `Members`
+      INNER JOIN `Bookings`ON `Members`.`memid` = `Bookings`.`memid`
+      INNER JOIN `Facilities` ON `Bookings`.`facid` = `Facilities`.`facid`) AS inner_table
+WHERE `starttime` > '2012-09-14 00:00:00'
+AND `starttime` < '2012-09-15 00:00:00'
+AND `cost` >30
+ORDER BY `cost` DESC
+
 
 
 
@@ -196,7 +202,7 @@ SELECT M.`firstname` || ' ' || M.`surname`, F.name, COUNT(B.bookid)
         INNER JOIN Facilities AS F ON B.facid = F.facid
         INNER JOIN Members as M ON B.memid = M.memid
         WHERE B.memid <> 0
-        GROUP BY B.memid
+        GROUP BY B.memid, F.name
         ORDER BY F.name
 
 
@@ -207,6 +213,7 @@ SELECT M.`firstname` || ' ' || M.`surname`, F.name, COUNT(B.bookid)
 SELECT strftime('%m', B.starttime) AS Month, F.name, COUNT(B.bookid)
         FROM Bookings AS B
         INNER JOIN Facilities AS F ON B.facid = F.facid
+        WHERE B.memid >0
         GROUP BY Month, F.name
 
 
